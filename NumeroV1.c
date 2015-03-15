@@ -7,12 +7,24 @@
 #include <sys/time.h>
 #include "mpi.h"
 
-#define TAMANNO 100
-#define EXP 100
+#define TAMANNO 50
+#define EXP 100000
+
+/*int menor50(int random)
+{
+    if(random < 50)
+	return random;
+    if(random < 100)
+	return random/2;
+    else
+	menor50(random/((rand()%2)+1));
+}*/
+
 
 int main (int argc, char ** argv)
 {
     int i,n,o;
+	float res;
     int iId ; 
 	int iNumProcs; 
     float almacen_num[TAMANNO];
@@ -23,17 +35,14 @@ int main (int argc, char ** argv)
 	double tmpInit = 0.0;
 	double tmpFin = 0.0;
 	float suma = 0.0f;
-    MPI_Status status;
-	
+        MPI_Status status;
 
 	MPI_Init (&argc ,&argv); 						
 	MPI_Comm_rank(MPI_COMM_WORLD,&iId ); 			
 	MPI_Comm_size(MPI_COMM_WORLD, &iNumProcs ); 	
-
-    srand(time(NULL));
 	
 	tmpInit=MPI_Wtime(); 
-	
+	srand(iId);
 	// El id=0 espera los resultados
 	for(i=0;i<TAMANNO;i++)
         {
@@ -50,7 +59,7 @@ int main (int argc, char ** argv)
         }
           for(i=0;i<EXP;i++)
         {
-            n = rand() % 100;
+	    n=rand()%50;
             almacen_num[n]++; 
         }
 		 for(i=0;i<TAMANNO;i++)
@@ -58,16 +67,19 @@ int main (int argc, char ** argv)
             printf("pid %d=> posicion array %d => %f\n",iId,i,almacen_num[i]); 
         }
 		MPI_Send(almacen_num, TAMANNO, MPI_INT, 0, 0, MPI_COMM_WORLD);
-	
+//		MPI_Bcast(almacen_num, TAMANNO, MPI_FLOAT,iId, MPI_COMM_WORLD);	
+
+
     }
    	tmpFin = MPI_Wtime();
     if(iId == 0) 
     {
 	int a;
+//	MPI_Reduce(almacen_num, resultado, 0,MPI_FLOAT,MPI_SUM,0,MPI_COMM_WORLD);
 		for(a = 0 ; a < iNumProcs ; a++)
 		{
 			if(a != 0){
-				MPI_Recv(almacen_num, TAMANNO, MPI_INT, a, 0, MPI_COMM_WORLD, &status);
+				MPI_Recv(almacen_num, TAMANNO, MPI_FLOAT, a, 0, MPI_COMM_WORLD, &status);
 				for(o = 0; o < TAMANNO; o++)
 				{
 					resultado[o] += almacen_num[o]; 
@@ -77,7 +89,7 @@ int main (int argc, char ** argv)
 		}
 		for(i=0;i<TAMANNO;i++)
 		        {
-		            printf("pid %d=> resultado array %d => %f\n",iId,i,almacen_num[i]); 
+		            printf("pid %d=> resultado array %d => %f=>frecuencia %f\n",iId,i,resultado[i],resultado[i]/EXP); 
 		        }
 
 	//calculamos la media
@@ -91,7 +103,6 @@ int main (int argc, char ** argv)
 
 	for(i=0;i<TAMANNO;i++){
 		desviacionMedia = abs(i-media)*resultado[i];
-		
 	}
 	//calculamos lista de frecuencias
 	for(i=0;i<TAMANNO;i++){
@@ -103,11 +114,11 @@ int main (int argc, char ** argv)
 	printf("Numero de experimentos (%d): %d\n",iNumProcs,EXP);
 	for(i=0; i<TAMANNO; i++)
 	{
-		//printf("%f\n",frec[i]);
+		////printf("%f\n",frec[i]);
 		suma += frec[i];
 	}
 	printf("Tiempo: %f\n", tmpFin-tmpInit);
-	printf("numProcs1: %f\n",suma);
+	printf("Suma Frecuencias=>: %f\n",suma);
     }
 	
     MPI_Finalize();
